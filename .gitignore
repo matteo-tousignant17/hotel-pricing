@@ -6,6 +6,8 @@ node_modules/
 # Next.js
 frontend/.next/
 frontend/out/
+.next/
+out/
 *.tsbuildinfo
 
 # Environment
