@@ -74,6 +74,7 @@ def calculate_pricing(request: PricingRequest):
         lead_time_days=request.lead_time_days,
         length_of_stay=request.length_of_stay,
         rate_channel=request.rate_channel,
+        custom_weights=request.custom_weights.model_dump() if request.custom_weights else None,
     )
     if result is None:
         raise HTTPException(status_code=404, detail="Hotel or room type not found")

@@ -25,6 +25,15 @@ class PricingResult(BaseModel):
     factors: FactorBreakdown
 
 
+class CustomWeights(BaseModel):
+    w_day_of_week: float = 1.0
+    w_season: float = 1.0
+    w_lead_time: float = 1.0
+    w_event: float = 1.0
+    w_demand_pickup: float = 1.0
+    w_comp_set: float = 1.0
+
+
 class PricingRequest(BaseModel):
     hotel_id: UUID
     room_type_id: UUID
@@ -32,6 +41,7 @@ class PricingRequest(BaseModel):
     lead_time_days: int = 14
     length_of_stay: int = 1
     rate_channel: str = "direct"
+    custom_weights: CustomWeights | None = None
 
 
 class RateCalendarEntry(BaseModel):

@@ -77,6 +77,24 @@ export interface RateCalendarEntry {
   rooms_available: number | null;
 }
 
+export interface CustomWeights {
+  w_day_of_week: number;
+  w_season: number;
+  w_lead_time: number;
+  w_event: number;
+  w_demand_pickup: number;
+  w_comp_set: number;
+}
+
+export const DEFAULT_WEIGHTS: CustomWeights = {
+  w_day_of_week: 1.0,
+  w_season: 1.0,
+  w_lead_time: 1.0,
+  w_event: 1.0,
+  w_demand_pickup: 1.0,
+  w_comp_set: 1.0,
+};
+
 export interface Event {
   id: string;
   name: string;

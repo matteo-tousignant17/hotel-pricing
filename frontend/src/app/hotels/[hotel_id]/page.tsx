@@ -4,6 +4,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { FactorBreakdownChart } from "@/components/pricing/FactorBreakdownChart";
 import { RateCalendarChart } from "@/components/pricing/RateCalendarChart";
+import { PricingSimulator } from "@/components/pricing/PricingSimulator";
 
 export default async function HotelDetailPage({
   params,
@@ -194,6 +195,17 @@ export default async function HotelDetailPage({
           )}
         </section>
       </div>
+
+      {/* Live Pricing Simulator */}
+      {hotel.room_types && hotel.room_types.length > 0 && (
+        <section className="rounded-xl border border-gray-200 bg-white p-6">
+          <h2 className="mb-1 font-semibold">Live Pricing Simulator</h2>
+          <p className="mb-6 text-xs text-gray-500">
+            Adjust date, lead time, and factor weights — rate recalculates live via the pricing algorithm
+          </p>
+          <PricingSimulator hotelId={hotel.id} roomTypes={hotel.room_types} />
+        </section>
+      )}
     </div>
   );
 }

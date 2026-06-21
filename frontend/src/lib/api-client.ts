@@ -1,4 +1,4 @@
-import type { Hotel, PricingResult, RateCalendarEntry, Event } from "./types";
+import type { Hotel, PricingResult, RateCalendarEntry, Event, CustomWeights } from "./types";
 
 const BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
@@ -39,6 +39,7 @@ export const api = {
       lead_time_days?: number;
       length_of_stay?: number;
       rate_channel?: string;
+      custom_weights?: CustomWeights;
     }) => post<PricingResult>("/api/pricing/calculate", params),
   },
   events: {
