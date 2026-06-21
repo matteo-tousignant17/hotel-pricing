@@ -10,8 +10,19 @@ router = APIRouter()
 @router.get("", response_model=list[Hotel])
 def list_hotels():
     client = get_client()
-    result = client.table("hotels").select("*").eq("is_active", True).order("name").execute()
-    return result.data
+    result = (
+        client.table("hotels")
+        .select("*, room_types(base_rate)")
+        .eq("is_active", True)
+        .order("name")
+        .execute()
+    )
+    hotels = []
+    for h in result.data:
+        rates = [r["base_rate"] for r in (h.pop("room_types", None) or []) if r.get("base_rate")]
+        h["min_rate"] = min(rates) if rates else None
+        hotels.append(h)
+    return hotels
 
 
 @router.get("/{hotel_id}", response_model=HotelWithRooms)

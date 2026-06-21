@@ -16,7 +16,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               Denver Hotel Pricing
             </a>
             <div className="flex gap-6 text-sm text-gray-600">
-              <a href="/hotels" className="hover:text-brand-600">Hotels</a>
+              <a href="/hotels" className="hover:text-blue-600">Hotels</a>
+              <a href="/events" className="hover:text-blue-600">Events</a>
             </div>
           </div>
         </nav>

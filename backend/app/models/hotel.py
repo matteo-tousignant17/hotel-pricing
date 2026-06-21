@@ -44,9 +44,12 @@ class Hotel(BaseModel):
     has_airport_shuttle: bool
     has_parking: bool
     parking_fee_nightly: float | None
+    has_ev_charging: bool
+    has_business_center: bool
     loyalty_program: str | None
     total_rooms: int | None
     is_active: bool
+    min_rate: float | None = None
 
 
 class HotelWithRooms(Hotel):

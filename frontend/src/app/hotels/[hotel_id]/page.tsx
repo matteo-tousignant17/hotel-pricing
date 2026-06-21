@@ -1,18 +1,40 @@
 import { api } from "@/lib/api-client";
-import type { Hotel } from "@/lib/types";
+import type { Hotel, PricingResult, RateCalendarEntry } from "@/lib/types";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { FactorBreakdownChart } from "@/components/pricing/FactorBreakdownChart";
+import { RateCalendarChart } from "@/components/pricing/RateCalendarChart";
 
 export default async function HotelDetailPage({
   params,
 }: {
   params: { hotel_id: string };
 }) {
-  let hotel: Hotel;
+  let hotel: Hotel | undefined;
   try {
     hotel = await api.hotels.get(params.hotel_id);
   } catch {
     notFound();
+  }
+  if (!hotel) notFound();
+
+  // Pick STD-K or cheapest room type for pricing data
+  const stdRoom =
+    hotel.room_types?.find((r) => r.code === "STD-K") ??
+    hotel.room_types?.sort((a, b) => a.base_rate - b.base_rate)[0];
+
+  const today = new Date().toISOString().slice(0, 10);
+
+  let pricing: PricingResult | null = null;
+  let calendar: RateCalendarEntry[] = [];
+
+  if (stdRoom) {
+    const [pricingResult, calendarResult] = await Promise.allSettled([
+      api.pricing.forDate(hotel.id, today, stdRoom.id),
+      api.pricing.calendar(hotel.id, stdRoom.id, 90),
+    ]);
+    if (pricingResult.status === "fulfilled") pricing = pricingResult.value;
+    if (calendarResult.status === "fulfilled") calendar = calendarResult.value;
   }
 
   const amenities = [
@@ -21,9 +43,10 @@ export default async function HotelDetailPage({
     hotel.has_gym && "Gym",
     hotel.has_restaurant && "Restaurant",
     hotel.has_airport_shuttle && "Airport Shuttle",
-    hotel.has_parking && `Parking${hotel.parking_fee_nightly ? ` ($${hotel.parking_fee_nightly}/night)` : " (free)"}`,
     hotel.has_ev_charging && "EV Charging",
     hotel.has_business_center && "Business Center",
+    hotel.has_parking &&
+      `Parking${hotel.parking_fee_nightly ? ` ($${hotel.parking_fee_nightly}/night)` : " (free)"}`,
   ].filter(Boolean);
 
   return (
@@ -38,6 +61,38 @@ export default async function HotelDetailPage({
           {hotel.brand && ` · ${hotel.brand}`}
         </p>
       </div>
+
+      {/* Pricing Factor Breakdown */}
+      {pricing ? (
+        <section className="rounded-xl border border-gray-200 bg-white p-6">
+          <h2 className="mb-1 font-semibold">Pricing Factor Breakdown</h2>
+          <p className="mb-5 text-xs text-gray-500">
+            {stdRoom?.name} · Direct channel · Pre-computed adjustments from rate calendar
+          </p>
+          <FactorBreakdownChart
+            factors={pricing.factors}
+            baseRate={pricing.base_rate}
+            finalRate={pricing.rate_final}
+            date={pricing.stay_date}
+          />
+        </section>
+      ) : stdRoom ? (
+        <section className="rounded-xl border border-amber-100 bg-amber-50 p-6">
+          <h2 className="mb-1 font-semibold text-amber-800">No rate data for today</h2>
+          <p className="text-sm text-amber-700">
+            Rate calendar may not include today&apos;s date. Check that the seed was applied.
+          </p>
+        </section>
+      ) : null}
+
+      {/* 90-Day Rate Calendar */}
+      {calendar.length > 0 && stdRoom && (
+        <section className="rounded-xl border border-gray-200 bg-white p-6">
+          <h2 className="mb-1 font-semibold">90-Day Rate Calendar</h2>
+          <p className="mb-4 text-xs text-gray-500">{stdRoom.name} · Direct channel</p>
+          <RateCalendarChart entries={calendar} baseRate={stdRoom.base_rate} />
+        </section>
+      )}
 
       <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
         <section className="rounded-xl border border-gray-200 bg-white p-6">
@@ -75,15 +130,23 @@ export default async function HotelDetailPage({
             </div>
             <div className="flex justify-between">
               <dt className="text-gray-500">To Convention Center</dt>
-              <dd>{hotel.dist_convention_ctr_miles != null ? `${hotel.dist_convention_ctr_miles} mi` : "—"}</dd>
+              <dd>
+                {hotel.dist_convention_ctr_miles != null
+                  ? `${hotel.dist_convention_ctr_miles} mi`
+                  : "—"}
+              </dd>
             </div>
             <div className="flex justify-between">
               <dt className="text-gray-500">To Airport (DIA)</dt>
-              <dd>{hotel.dist_airport_miles != null ? `${hotel.dist_airport_miles} mi` : "—"}</dd>
+              <dd>
+                {hotel.dist_airport_miles != null ? `${hotel.dist_airport_miles} mi` : "—"}
+              </dd>
             </div>
             <div className="flex justify-between">
               <dt className="text-gray-500">To LoDo</dt>
-              <dd>{hotel.dist_lodo_miles != null ? `${hotel.dist_lodo_miles} mi` : "—"}</dd>
+              <dd>
+                {hotel.dist_lodo_miles != null ? `${hotel.dist_lodo_miles} mi` : "—"}
+              </dd>
             </div>
           </dl>
         </section>
@@ -131,15 +194,6 @@ export default async function HotelDetailPage({
           )}
         </section>
       </div>
-
-      <section className="rounded-xl border border-blue-100 bg-blue-50 p-6">
-        <h2 className="mb-2 font-semibold text-blue-800">Pricing Factors (coming in Stage 3)</h2>
-        <p className="text-sm text-blue-700">
-          The factor breakdown panel — showing adj_day_of_week, adj_season, adj_event,
-          adj_lead_time, adj_demand_pickup, and adj_comp_set as a bar chart — will be
-          built in Stage 3 once the database is seeded with rate_calendar data.
-        </p>
-      </section>
     </div>
   );
 }

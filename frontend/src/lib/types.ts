@@ -39,9 +39,12 @@ export interface Hotel {
   has_airport_shuttle: boolean;
   has_parking: boolean;
   parking_fee_nightly: number | null;
+  has_ev_charging: boolean;
+  has_business_center: boolean;
   loyalty_program: string | null;
   total_rooms: number | null;
   is_active: boolean;
+  min_rate?: number | null;
   room_types?: RoomType[];
 }
 

@@ -47,7 +47,8 @@ export const api = {
       const params = new URLSearchParams();
       if (start) params.set("start", start);
       if (end) params.set("end", end);
-      return get<Event[]>(`/api/events?${params}`);
+      const qs = params.toString();
+      return get<Event[]>(`/api/events${qs ? `?${qs}` : ""}`);
     },
   },
 };
