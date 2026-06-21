@@ -15,13 +15,13 @@ const WEIGHT_LABELS: Record<keyof CustomWeights, string> = {
   w_comp_set: "Comp Set",
 };
 
-const WEIGHT_DESCRIPTIONS: Record<keyof CustomWeights, string> = {
-  w_day_of_week: "Fri/Sat +12%, Sun +5%",
-  w_season: "Summer/ski peaks",
-  w_lead_time: "Last-minute premium, advance discount",
-  w_event: "Broncos games, GABF, conventions",
-  w_demand_pickup: "Occupancy vs. historical baseline",
-  w_comp_set: "Position vs. competitor rates",
+const WEIGHT_HINTS: Record<keyof CustomWeights, string> = {
+  w_day_of_week: "Fri/Sat & Sun premiums",
+  w_season: "Summer & ski peaks",
+  w_lead_time: "Last-min & advance",
+  w_event: "Games, GABF, conventions",
+  w_demand_pickup: "Occupancy vs. baseline",
+  w_comp_set: "vs. competitor rates",
 };
 
 interface Props {
@@ -71,9 +71,7 @@ export function PricingSimulator({ hotelId, roomTypes }: Props) {
   useEffect(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(fetchRate, 350);
-    return () => {
-      if (debounceRef.current) clearTimeout(debounceRef.current);
-    };
+    return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
   }, [fetchRate]);
 
   const updateWeight = (key: keyof CustomWeights, value: number) =>
@@ -86,8 +84,8 @@ export function PricingSimulator({ hotelId, roomTypes }: Props) {
 
   return (
     <div className="space-y-6">
-      {/* Inputs */}
-      <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+      {/* Inputs row */}
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         <div>
           <label className="mb-1 block text-xs font-medium text-gray-500">Stay Date</label>
           <input
@@ -118,8 +116,7 @@ export function PricingSimulator({ hotelId, roomTypes }: Props) {
           >
             {[1, 2, 3, 4, 5, 6, 7, 10, 14].map((n) => (
               <option key={n} value={n}>
-                {n} {n === 1 ? "night" : "nights"}
-                {n >= 7 ? " (−10%)" : n >= 3 ? " (−5%)" : ""}
+                {n} {n === 1 ? "night" : "nights"}{n >= 7 ? " (−10%)" : n >= 3 ? " (−5%)" : ""}
               </option>
             ))}
           </select>
@@ -138,6 +135,7 @@ export function PricingSimulator({ hotelId, roomTypes }: Props) {
         </div>
       </div>
 
+      {/* Room type picker */}
       {roomTypes.length > 1 && (
         <div>
           <label className="mb-1.5 block text-xs font-medium text-gray-500">Room Type</label>
@@ -164,38 +162,25 @@ export function PricingSimulator({ hotelId, roomTypes }: Props) {
         <div className="mb-3 flex items-center justify-between">
           <h3 className="text-sm font-medium text-gray-700">Factor Weights</h3>
           {weightsModified && (
-            <button
-              onClick={resetWeights}
-              className="text-xs text-blue-600 hover:text-blue-700"
-            >
+            <button onClick={resetWeights} className="text-xs text-blue-600 hover:text-blue-700">
               Reset to defaults
             </button>
           )}
         </div>
-        <div className="grid gap-3 sm:grid-cols-2">
+        <div className="grid gap-4 sm:grid-cols-2">
           {(Object.keys(DEFAULT_WEIGHTS) as (keyof CustomWeights)[]).map((key) => {
             const val = weights[key];
             const pct = Math.round(val * 100);
             return (
-              <div key={key} className="space-y-1">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <span className="text-xs font-medium text-gray-700">
-                      {WEIGHT_LABELS[key]}
-                    </span>
-                    <span className="ml-2 text-xs text-gray-400">
-                      {WEIGHT_DESCRIPTIONS[key]}
-                    </span>
+              <div key={key} className="space-y-1.5">
+                <div className="flex items-baseline justify-between gap-2">
+                  <div className="min-w-0">
+                    <span className="text-xs font-medium text-gray-700">{WEIGHT_LABELS[key]}</span>
+                    <span className="ml-1.5 text-xs text-gray-400 hidden sm:inline">{WEIGHT_HINTS[key]}</span>
                   </div>
                   <span
-                    className={`text-xs font-semibold tabular-nums ${
-                      val === 0
-                        ? "text-gray-400"
-                        : val > 1
-                        ? "text-amber-600"
-                        : val < 1
-                        ? "text-blue-600"
-                        : "text-gray-600"
+                    className={`shrink-0 text-xs font-semibold tabular-nums ${
+                      val === 0 ? "text-gray-400" : val > 1 ? "text-amber-600" : val < 1 ? "text-blue-600" : "text-gray-600"
                     }`}
                   >
                     {pct}%
@@ -222,18 +207,16 @@ export function PricingSimulator({ hotelId, roomTypes }: Props) {
       </div>
 
       {/* Result */}
-      <div className="rounded-xl border border-gray-200 bg-gray-50 p-5">
+      <div className="rounded-xl border border-gray-200 bg-gray-50 p-4 sm:p-5">
         {loading && (
           <div className="flex items-center gap-2 text-sm text-gray-500">
             <span className="animate-pulse">●</span> Calculating…
           </div>
         )}
-        {error && !loading && (
-          <p className="text-sm text-red-600">{error}</p>
-        )}
+        {error && !loading && <p className="text-sm text-red-600">{error}</p>}
         {result && !loading && (
-          <div className="space-y-1">
-            <div className="mb-3 flex items-center gap-3 text-xs text-gray-500">
+          <div>
+            <div className="mb-3 flex flex-wrap items-center gap-3 text-xs text-gray-500">
               {result.occupancy_pct != null && (
                 <span>
                   Occupancy{" "}

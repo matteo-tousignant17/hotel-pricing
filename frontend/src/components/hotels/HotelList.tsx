@@ -11,13 +11,6 @@ const TIER_COLORS: Record<string, string> = {
   budget: "bg-gray-100 text-gray-600",
 };
 
-const IMPACT_COLORS: Record<string, string> = {
-  high: "text-red-600 font-semibold",
-  citywide: "text-purple-600 font-semibold",
-  medium: "text-amber-600",
-  low: "text-gray-500",
-};
-
 type SortKey = "name" | "stars" | "rate" | "rooms";
 type Tier = Hotel["brand_tier"];
 
@@ -41,14 +34,10 @@ export function HotelList({ hotels }: Props) {
     if (neighborhoodFilter !== "all") list = list.filter((h) => h.neighborhood === neighborhoodFilter);
     return [...list].sort((a, b) => {
       switch (sortKey) {
-        case "stars":
-          return (b.star_rating ?? 0) - (a.star_rating ?? 0);
-        case "rate":
-          return (a.min_rate ?? Infinity) - (b.min_rate ?? Infinity);
-        case "rooms":
-          return (b.total_rooms ?? 0) - (a.total_rooms ?? 0);
-        default:
-          return a.name.localeCompare(b.name);
+        case "stars": return (b.star_rating ?? 0) - (a.star_rating ?? 0);
+        case "rate": return (a.min_rate ?? Infinity) - (b.min_rate ?? Infinity);
+        case "rooms": return (b.total_rooms ?? 0) - (a.total_rooms ?? 0);
+        default: return a.name.localeCompare(b.name);
       }
     });
   }, [hotels, tierFilter, neighborhoodFilter, sortKey]);
@@ -56,8 +45,9 @@ export function HotelList({ hotels }: Props) {
   return (
     <div className="space-y-4">
       {/* Filters */}
-      <div className="flex flex-wrap items-center gap-3">
-        <div className="flex gap-1.5">
+      <div className="space-y-2">
+        {/* Tier chips + count */}
+        <div className="flex flex-wrap items-center gap-1.5">
           {(["all", "luxury", "upscale", "midscale", "budget"] as const).map((t) => (
             <button
               key={t}
@@ -67,7 +57,7 @@ export function HotelList({ hotels }: Props) {
                   ? t === "all"
                     ? "bg-gray-800 text-white"
                     : `${TIER_COLORS[t]} ring-2 ring-offset-1 ring-current`
-                  : "bg-white border border-gray-200 text-gray-600 hover:border-gray-400"
+                  : "border border-gray-200 bg-white text-gray-600 hover:border-gray-400"
               }`}
             >
               {t === "all" ? "All Tiers" : t.charAt(0).toUpperCase() + t.slice(1)}
@@ -75,40 +65,86 @@ export function HotelList({ hotels }: Props) {
           ))}
         </div>
 
-        <select
-          value={neighborhoodFilter}
-          onChange={(e) => setNeighborhoodFilter(e.target.value)}
-          className="rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
-        >
-          {neighborhoods.map((n) => (
-            <option key={n} value={n}>
-              {n === "all" ? "All Neighborhoods" : n}
-            </option>
-          ))}
-        </select>
+        {/* Neighborhood + sort */}
+        <div className="flex flex-wrap items-center gap-2">
+          <select
+            value={neighborhoodFilter}
+            onChange={(e) => setNeighborhoodFilter(e.target.value)}
+            className="rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            {neighborhoods.map((n) => (
+              <option key={n} value={n}>
+                {n === "all" ? "All Neighborhoods" : n}
+              </option>
+            ))}
+          </select>
 
-        <div className="ml-auto flex items-center gap-1.5 text-xs text-gray-500">
-          <span>Sort:</span>
-          {(["name", "stars", "rate", "rooms"] as const).map((k) => (
-            <button
-              key={k}
-              onClick={() => setSortKey(k)}
-              className={`rounded px-2 py-1 transition-colors ${
-                sortKey === k
-                  ? "bg-gray-100 font-medium text-gray-800"
-                  : "text-gray-500 hover:text-gray-700"
-              }`}
-            >
-              {k.charAt(0).toUpperCase() + k.slice(1)}
-            </button>
-          ))}
+          <div className="flex items-center gap-1 text-xs text-gray-500">
+            <span>Sort:</span>
+            {(["name", "stars", "rate", "rooms"] as const).map((k) => (
+              <button
+                key={k}
+                onClick={() => setSortKey(k)}
+                className={`rounded px-2 py-1 transition-colors ${
+                  sortKey === k
+                    ? "bg-gray-100 font-medium text-gray-800"
+                    : "text-gray-500 hover:text-gray-700"
+                }`}
+              >
+                {k.charAt(0).toUpperCase() + k.slice(1)}
+              </button>
+            ))}
+          </div>
+
+          <span className="ml-auto text-xs text-gray-400">{filtered.length} properties</span>
         </div>
       </div>
 
-      <p className="text-sm text-gray-500">{filtered.length} properties</p>
+      {/* Mobile: card list */}
+      <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm sm:hidden">
+        {filtered.length === 0 ? (
+          <div className="p-10 text-center text-sm text-gray-400">No hotels match the selected filters.</div>
+        ) : (
+          <div className="divide-y divide-gray-100">
+            {filtered.map((hotel) => (
+              <Link
+                key={hotel.id}
+                href={`/hotels/${hotel.id}`}
+                className="flex items-start justify-between gap-3 px-4 py-3.5 hover:bg-gray-50 active:bg-gray-100"
+              >
+                <div className="min-w-0">
+                  <div className="truncate font-medium text-sm text-gray-900">{hotel.name}</div>
+                  <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-gray-500">
+                    <span>{hotel.neighborhood}</span>
+                    {hotel.star_rating && (
+                      <span className="text-amber-500">{"★".repeat(Math.floor(hotel.star_rating))}</span>
+                    )}
+                    {hotel.brand_tier && (
+                      <span className={`rounded-full px-1.5 py-0.5 text-xs font-medium capitalize ${TIER_COLORS[hotel.brand_tier]}`}>
+                        {hotel.brand_tier}
+                      </span>
+                    )}
+                  </div>
+                </div>
+                <div className="shrink-0 text-right">
+                  {hotel.min_rate != null ? (
+                    <div className="font-semibold text-sm text-gray-900">${hotel.min_rate}<span className="text-xs font-normal text-gray-500">/nt</span></div>
+                  ) : (
+                    <div className="text-sm text-gray-400">—</div>
+                  )}
+                  <div className="mt-0.5 flex justify-end gap-2 text-xs">
+                    {hotel.google_score && <span className="text-blue-600">G {hotel.google_score}</span>}
+                    {hotel.tripadvisor_score && <span className="text-green-600">TA {hotel.tripadvisor_score}</span>}
+                  </div>
+                </div>
+              </Link>
+            ))}
+          </div>
+        )}
+      </div>
 
-      {/* Table */}
-      <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
+      {/* Desktop: table */}
+      <div className="hidden overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm sm:block">
         <table className="w-full text-sm">
           <thead className="border-b border-gray-200 bg-gray-50 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
             <tr>
@@ -127,9 +163,7 @@ export function HotelList({ hotels }: Props) {
               <tr key={hotel.id} className="hover:bg-gray-50">
                 <td className="px-6 py-4">
                   <div className="font-medium">{hotel.name}</div>
-                  {hotel.brand && (
-                    <div className="text-xs text-gray-400">{hotel.brand}</div>
-                  )}
+                  {hotel.brand && <div className="text-xs text-gray-400">{hotel.brand}</div>}
                 </td>
                 <td className="px-6 py-4 text-gray-600">{hotel.neighborhood ?? "—"}</td>
                 <td className="px-6 py-4">
@@ -144,9 +178,7 @@ export function HotelList({ hotels }: Props) {
                 </td>
                 <td className="px-6 py-4">
                   {hotel.brand_tier && (
-                    <span
-                      className={`rounded-full px-2 py-0.5 text-xs font-medium capitalize ${TIER_COLORS[hotel.brand_tier]}`}
-                    >
+                    <span className={`rounded-full px-2 py-0.5 text-xs font-medium capitalize ${TIER_COLORS[hotel.brand_tier]}`}>
                       {hotel.brand_tier}
                     </span>
                   )}
@@ -161,19 +193,12 @@ export function HotelList({ hotels }: Props) {
                 </td>
                 <td className="px-6 py-4">
                   <div className="flex gap-3 text-xs">
-                    {hotel.tripadvisor_score && (
-                      <span className="text-green-600">TA {hotel.tripadvisor_score}</span>
-                    )}
-                    {hotel.google_score && (
-                      <span className="text-blue-600">G {hotel.google_score}</span>
-                    )}
+                    {hotel.tripadvisor_score && <span className="text-green-600">TA {hotel.tripadvisor_score}</span>}
+                    {hotel.google_score && <span className="text-blue-600">G {hotel.google_score}</span>}
                   </div>
                 </td>
                 <td className="px-6 py-4">
-                  <Link
-                    href={`/hotels/${hotel.id}`}
-                    className="font-medium text-blue-600 hover:text-blue-700"
-                  >
+                  <Link href={`/hotels/${hotel.id}`} className="font-medium text-blue-600 hover:text-blue-700">
                     View →
                   </Link>
                 </td>
@@ -182,9 +207,7 @@ export function HotelList({ hotels }: Props) {
           </tbody>
         </table>
         {filtered.length === 0 && (
-          <div className="p-12 text-center text-sm text-gray-400">
-            No hotels match the selected filters.
-          </div>
+          <div className="p-12 text-center text-sm text-gray-400">No hotels match the selected filters.</div>
         )}
       </div>
     </div>

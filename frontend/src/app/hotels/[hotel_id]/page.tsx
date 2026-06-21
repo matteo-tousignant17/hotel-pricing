@@ -51,13 +51,13 @@ export default async function HotelDetailPage({
   ].filter(Boolean);
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6 sm:space-y-8">
       <div>
         <Link href="/hotels" className="text-sm text-gray-500 hover:text-gray-700">
           ← All Hotels
         </Link>
-        <h1 className="mt-2 text-2xl font-bold">{hotel.name}</h1>
-        <p className="text-gray-500">
+        <h1 className="mt-2 text-xl font-bold sm:text-2xl">{hotel.name}</h1>
+        <p className="text-sm text-gray-500 sm:text-base">
           {hotel.neighborhood} · {hotel.star_rating}★ · {hotel.brand_tier}
           {hotel.brand && ` · ${hotel.brand}`}
         </p>
