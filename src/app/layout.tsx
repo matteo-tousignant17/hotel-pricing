@@ -18,6 +18,14 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             <div className="flex gap-4 text-sm text-gray-600 sm:gap-6">
               <a href="/hotels" className="hover:text-blue-600">Hotels</a>
               <a href="/events" className="hover:text-blue-600">Events</a>
+              <a
+                href="https://hotel-pricing-nine.vercel.app"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="hover:text-blue-600"
+              >
+                Live Site ↗
+              </a>
             </div>
           </div>
         </nav>

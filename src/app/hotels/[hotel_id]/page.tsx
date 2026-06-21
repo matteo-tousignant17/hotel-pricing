@@ -106,6 +106,17 @@ export default async function HotelDetailPage({
         </p>
       </div>
 
+      {/* Live Pricing Simulator — primary interactive panel */}
+      {typedHotel.room_types && typedHotel.room_types.length > 0 && (
+        <section className="rounded-xl border border-gray-200 bg-white p-6">
+          <h2 className="mb-1 font-semibold">Live Pricing Simulator</h2>
+          <p className="mb-6 text-xs text-gray-500">
+            Adjust segment, date, lead time, and factor weights — rate recalculates live
+          </p>
+          <PricingSimulator hotelId={typedHotel.id} roomTypes={typedHotel.room_types} />
+        </section>
+      )}
+
       {/* Pricing Factor Breakdown */}
       {pricing ? (
         <section className="rounded-xl border border-gray-200 bg-white p-6">
@@ -241,16 +252,6 @@ export default async function HotelDetailPage({
         </section>
       </div>
 
-      {/* Live Pricing Simulator */}
-      {typedHotel.room_types && typedHotel.room_types.length > 0 && (
-        <section className="rounded-xl border border-gray-200 bg-white p-6">
-          <h2 className="mb-1 font-semibold">Live Pricing Simulator</h2>
-          <p className="mb-6 text-xs text-gray-500">
-            Adjust date, lead time, and factor weights — rate recalculates live via the pricing algorithm
-          </p>
-          <PricingSimulator hotelId={typedHotel.id} roomTypes={typedHotel.room_types} />
-        </section>
-      )}
     </div>
   );
 }
