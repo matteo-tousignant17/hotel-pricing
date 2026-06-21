@@ -47,6 +47,8 @@ export async function POST(req: Request) {
     length_of_stay = 1,
     rate_channel = "direct",
     custom_weights,
+    market_segment = "transient",
+    contract_type = "corporate_lnr",
   } = body;
 
   if (!hotel_id || !room_type_id || !stay_date) {
@@ -82,21 +84,21 @@ export async function POST(req: Request) {
 
   // --- Day of week ---
   const rawDow = dow === 5 || dow === 6 ? 0.12 : dow === 0 ? 0.05 : 0.0;
-  const adjDayOfWeek = round2(baseRate * weights.w_day_of_week * rawDow);
+  let adjDayOfWeek = round2(baseRate * weights.w_day_of_week * rawDow);
 
   // --- Season ---
   const season = (seasonsRes.data ?? []).find((s) =>
     dateInRange(month, day, s.month_start, s.day_start, s.month_end, s.day_end)
   );
   const rawSeason = season ? Number(season.demand_index) - 1.0 : 0.05;
-  const adjSeason = round2(baseRate * weights.w_season * rawSeason);
+  let adjSeason = round2(baseRate * weights.w_season * rawSeason);
 
   // --- Lead time ---
   const ltTier = (ltRes.data ?? []).find(
     (t) => t.days_min <= lead_time_days && (t.days_max == null || lead_time_days <= t.days_max)
   );
   const rawLt = ltTier ? Number(ltTier.rate_multiplier) - 1.0 : 0.0;
-  const adjLeadTime = round2(baseRate * weights.w_lead_time * rawLt);
+  let adjLeadTime = round2(baseRate * weights.w_lead_time * rawLt);
 
   // --- Length of stay ---
   const adjLos = length_of_stay >= 7 ? round2(baseRate * -0.10) : length_of_stay >= 3 ? round2(baseRate * -0.05) : 0;
@@ -113,7 +115,7 @@ export async function POST(req: Request) {
   const rawEvent = matchingEvents.length > 0
     ? Math.max(...matchingEvents.map((e) => eventEffect(e.demand_impact)))
     : 0;
-  const adjEvent = round2(baseRate * weights.w_event * rawEvent);
+  let adjEvent = round2(baseRate * weights.w_event * rawEvent);
 
   // --- Demand pickup ---
   const occupancyPct =
@@ -125,7 +127,7 @@ export async function POST(req: Request) {
   const rawDemand =
     delta >= 0.18 ? 0.12 : delta >= 0.10 ? 0.07 : delta >= 0.04 ? 0.03
     : delta >= -0.04 ? 0 : delta >= -0.10 ? -0.03 : -0.06;
-  const adjDemandPickup = round2(baseRate * weights.w_demand_pickup * rawDemand);
+  let adjDemandPickup = round2(baseRate * weights.w_demand_pickup * rawDemand);
 
   // --- Comp set (one more query if comp hotels exist) ---
   let adjCompSet = 0;
@@ -146,17 +148,45 @@ export async function POST(req: Request) {
   }
 
   // --- Channel ---
-  const adjChannel =
+  let adjChannel =
     rate_channel === "ota" ? round2(baseRate * 0.15)
     : rate_channel === "corporate" ? round2(baseRate * -0.10)
     : 0;
+
+  // --- Market segment overrides ---
+  let adjSegment = 0;
+  if (market_segment === "group") {
+    // Groups don't benefit from advance booking and span weekdays — suppress both
+    adjDayOfWeek = 0;
+    adjLeadTime = 0;
+    // Displacement discount: smaller when event compression exists, larger in slow periods
+    const groupDiscountPct =
+      rawEvent >= 0.15 ? 0.05 : rawSeason > 0.15 ? 0.12 : rawSeason > 0 ? 0.20 : 0.27;
+    adjSegment = round2(baseRate * -groupDiscountPct);
+  } else if (market_segment === "contract") {
+    // Contracted rates are pre-set — zero all dynamic factors
+    adjDayOfWeek = 0;
+    adjSeason = 0;
+    adjLeadTime = 0;
+    adjEvent = 0;
+    adjDemandPickup = 0;
+    adjCompSet = 0;
+    adjChannel = 0;
+    const contractDiscounts: Record<string, number> = {
+      corporate_lnr: -0.20,
+      cnr: -0.15,
+      government: -0.15,
+      airline_crew: -0.25,
+    };
+    adjSegment = round2(baseRate * (contractDiscounts[contract_type] ?? -0.20));
+  }
 
   const rateFinal = round2(
     Math.max(
       baseRate * 0.50,
       Math.min(
         baseRate * 4.0,
-        baseRate + adjDayOfWeek + adjSeason + adjEvent + adjLeadTime + adjLos + adjDemandPickup + adjCompSet + adjChannel
+        baseRate + adjDayOfWeek + adjSeason + adjEvent + adjLeadTime + adjLos + adjDemandPickup + adjCompSet + adjChannel + adjSegment
       )
     )
   );
@@ -178,6 +208,7 @@ export async function POST(req: Request) {
       adj_demand_pickup: adjDemandPickup,
       adj_comp_set: adjCompSet,
       adj_channel: adjChannel,
+      adj_segment: adjSegment,
     },
   });
 }

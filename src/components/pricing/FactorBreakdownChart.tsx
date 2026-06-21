@@ -22,6 +22,7 @@ const LABELS: Record<keyof FactorBreakdown, string> = {
   adj_demand_pickup: "Demand",
   adj_comp_set: "Comp Set",
   adj_channel: "Channel",
+  adj_segment: "Segment",
 };
 
 // Shorter labels for narrow screens
@@ -34,6 +35,7 @@ const SHORT_LABELS: Record<keyof FactorBreakdown, string> = {
   adj_demand_pickup: "Demand",
   adj_comp_set: "Comp",
   adj_channel: "Channel",
+  adj_segment: "Segment",
 };
 
 interface Props {

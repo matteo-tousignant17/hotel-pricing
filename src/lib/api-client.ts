@@ -1,4 +1,4 @@
-import type { PricingResult, CustomWeights } from "./types";
+import type { PricingResult, CustomWeights, MarketSegment, ContractType } from "./types";
 
 async function post<T>(path: string, body: unknown): Promise<T> {
   const res = await fetch(path, {
@@ -20,6 +20,8 @@ export const api = {
       length_of_stay?: number;
       rate_channel?: string;
       custom_weights?: CustomWeights;
+      market_segment?: MarketSegment;
+      contract_type?: ContractType;
     }) => post<PricingResult>("/api/pricing/calculate", params),
   },
 };

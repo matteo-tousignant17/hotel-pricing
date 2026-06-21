@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { api } from "@/lib/api-client";
 import { DEFAULT_WEIGHTS } from "@/lib/types";
-import type { RoomType, PricingResult, CustomWeights } from "@/lib/types";
+import type { RoomType, PricingResult, CustomWeights, MarketSegment, ContractType } from "@/lib/types";
 import { FactorBreakdownChart } from "./FactorBreakdownChart";
 
 const WEIGHT_LABELS: Record<keyof CustomWeights, string> = {
@@ -24,6 +24,19 @@ const WEIGHT_HINTS: Record<keyof CustomWeights, string> = {
   w_comp_set: "vs. competitor rates",
 };
 
+const SEGMENT_LABELS: Record<MarketSegment, string> = {
+  transient: "Transient",
+  group: "Group",
+  contract: "Contract",
+};
+
+const CONTRACT_TYPE_LABELS: Record<ContractType, string> = {
+  corporate_lnr: "Corporate LNR",
+  cnr: "Chain (CNR)",
+  airline_crew: "Airline Crew",
+  government: "Government",
+};
+
 interface Props {
   hotelId: string;
   roomTypes: RoomType[];
@@ -39,6 +52,8 @@ export function PricingSimulator({ hotelId, roomTypes }: Props) {
   const [los, setLos] = useState(1);
   const [channel, setChannel] = useState("direct");
   const [weights, setWeights] = useState<CustomWeights>({ ...DEFAULT_WEIGHTS });
+  const [marketSegment, setMarketSegment] = useState<MarketSegment>("transient");
+  const [contractType, setContractType] = useState<ContractType>("corporate_lnr");
 
   const [result, setResult] = useState<PricingResult | null>(null);
   const [loading, setLoading] = useState(false);
@@ -59,6 +74,8 @@ export function PricingSimulator({ hotelId, roomTypes }: Props) {
         length_of_stay: los,
         rate_channel: channel,
         custom_weights: weights,
+        market_segment: marketSegment,
+        contract_type: marketSegment === "contract" ? contractType : undefined,
       });
       setResult(data);
     } catch {
@@ -66,7 +83,7 @@ export function PricingSimulator({ hotelId, roomTypes }: Props) {
     } finally {
       setLoading(false);
     }
-  }, [hotelId, roomTypeId, stayDate, leadTime, los, channel, weights]);
+  }, [hotelId, roomTypeId, stayDate, leadTime, los, channel, weights, marketSegment, contractType]);
 
   useEffect(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
@@ -84,6 +101,61 @@ export function PricingSimulator({ hotelId, roomTypes }: Props) {
 
   return (
     <div className="space-y-6">
+      {/* Market segment selector */}
+      <div>
+        <label className="mb-1.5 block text-xs font-medium text-gray-500">Market Segment</label>
+        <div className="flex flex-wrap gap-2">
+          {(Object.keys(SEGMENT_LABELS) as MarketSegment[]).map((seg) => (
+            <button
+              key={seg}
+              onClick={() => setMarketSegment(seg)}
+              className={`rounded-lg border px-3 py-1.5 text-xs transition-colors ${
+                marketSegment === seg
+                  ? "border-blue-500 bg-blue-50 font-medium text-blue-700"
+                  : "border-gray-200 bg-white text-gray-600 hover:border-gray-400"
+              }`}
+            >
+              {SEGMENT_LABELS[seg]}
+            </button>
+          ))}
+        </div>
+
+        {/* Group context note */}
+        {marketSegment === "group" && (
+          <p className="mt-2 text-xs text-gray-500 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+            Lead time and day-of-week suppressed — group pricing is displacement-based.
+            Discount narrows on compression dates (events).
+          </p>
+        )}
+
+        {/* Contract sub-type selector */}
+        {marketSegment === "contract" && (
+          <div className="mt-2">
+            <div className="flex flex-wrap gap-2">
+              {(Object.keys(CONTRACT_TYPE_LABELS) as ContractType[]).map((ct) => (
+                <button
+                  key={ct}
+                  onClick={() => setContractType(ct)}
+                  className={`rounded-lg border px-3 py-1.5 text-xs transition-colors ${
+                    contractType === ct
+                      ? "border-purple-500 bg-purple-50 font-medium text-purple-700"
+                      : "border-gray-200 bg-white text-gray-600 hover:border-gray-400"
+                  }`}
+                >
+                  {CONTRACT_TYPE_LABELS[ct]}
+                </button>
+              ))}
+            </div>
+            <p className="mt-2 text-xs text-gray-500 bg-purple-50 border border-purple-200 rounded-lg px-3 py-2">
+              {contractType === "corporate_lnr" && "Local negotiated rate — fixed annual discount (−20%). Dynamic factors zeroed."}
+              {contractType === "cnr" && "Chain negotiated rate — brand-level deal (−15%). Dynamic factors zeroed."}
+              {contractType === "airline_crew" && "DIA crew contract — volume guaranteed 365 nights/yr (−25%). Dynamic factors zeroed."}
+              {contractType === "government" && "GSA per diem rate — Denver ~$149/night (−15%). Dynamic factors zeroed."}
+            </p>
+          </div>
+        )}
+      </div>
+
       {/* Inputs row */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         <div>
@@ -97,14 +169,20 @@ export function PricingSimulator({ hotelId, roomTypes }: Props) {
           />
         </div>
         <div>
-          <label className="mb-1 block text-xs font-medium text-gray-500">Lead Time (days)</label>
+          <label className="mb-1 block text-xs font-medium text-gray-500">
+            Lead Time (days)
+            {marketSegment === "group" && (
+              <span className="ml-1 text-amber-600 opacity-60">suppressed</span>
+            )}
+          </label>
           <input
             type="number"
             value={leadTime}
             min={0}
             max={180}
             onChange={(e) => setLeadTime(Math.max(0, parseInt(e.target.value) || 0))}
-            className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            disabled={marketSegment === "group"}
+            className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-40"
           />
         </div>
         <div>
@@ -122,11 +200,17 @@ export function PricingSimulator({ hotelId, roomTypes }: Props) {
           </select>
         </div>
         <div>
-          <label className="mb-1 block text-xs font-medium text-gray-500">Channel</label>
+          <label className="mb-1 block text-xs font-medium text-gray-500">
+            Channel
+            {marketSegment === "contract" && (
+              <span className="ml-1 text-purple-600 opacity-60">suppressed</span>
+            )}
+          </label>
           <select
             value={channel}
             onChange={(e) => setChannel(e.target.value)}
-            className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            disabled={marketSegment === "contract"}
+            className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-40"
           >
             <option value="direct">Direct</option>
             <option value="ota">OTA (+15%)</option>
@@ -231,6 +315,17 @@ export function PricingSimulator({ hotelId, roomTypes }: Props) {
                 {weightsModified && (
                   <span className="ml-1 rounded bg-amber-100 px-1.5 py-0.5 text-amber-700">
                     custom weights
+                  </span>
+                )}
+                {marketSegment !== "transient" && (
+                  <span className={`ml-1 rounded px-1.5 py-0.5 ${
+                    marketSegment === "group"
+                      ? "bg-amber-100 text-amber-700"
+                      : "bg-purple-100 text-purple-700"
+                  }`}>
+                    {marketSegment === "contract"
+                      ? CONTRACT_TYPE_LABELS[contractType]
+                      : SEGMENT_LABELS[marketSegment]}
                   </span>
                 )}
               </span>

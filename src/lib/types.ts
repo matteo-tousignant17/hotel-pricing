@@ -48,6 +48,9 @@ export interface Hotel {
   room_types?: RoomType[];
 }
 
+export type MarketSegment = "transient" | "group" | "contract";
+export type ContractType = "corporate_lnr" | "cnr" | "airline_crew" | "government";
+
 export interface FactorBreakdown {
   adj_day_of_week: number;
   adj_season: number;
@@ -57,6 +60,7 @@ export interface FactorBreakdown {
   adj_demand_pickup: number;
   adj_comp_set: number;
   adj_channel: number;
+  adj_segment: number;
 }
 
 export interface PricingResult {
