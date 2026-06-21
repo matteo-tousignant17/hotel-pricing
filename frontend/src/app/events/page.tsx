@@ -1,5 +1,5 @@
-import { api } from "@/lib/api-client";
 import type { Event } from "@/lib/types";
+import { getServerClient } from "@/lib/supabase-server";
 
 const IMPACT_STYLES: Record<string, string> = {
   citywide: "bg-purple-100 text-purple-800",
@@ -21,9 +21,16 @@ export default async function EventsPage() {
   let error: string | null = null;
 
   try {
-    events = await api.events.list();
+    const supabase = getServerClient();
+    const { data, error: dbError } = await supabase
+      .from("events")
+      .select("*")
+      .order("start_date");
+
+    if (dbError) throw dbError;
+    events = (data ?? []) as Event[];
   } catch {
-    error = "Could not load events. Make sure the API server is running.";
+    error = "Could not load events — check your Supabase connection.";
   }
 
   const grouped = events.reduce<Record<string, Event[]>>((acc, e) => {
