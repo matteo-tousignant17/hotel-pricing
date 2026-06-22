@@ -48,10 +48,10 @@ interface Props {
 }
 
 export function FactorBreakdownChart({ factors, baseRate, finalRate, date, rateFloor, rateCeiling }: Props) {
+  // Fixed order, all factors always present — prevents bars from jumping positions or
+  // disappearing/reappearing as values change (e.g. when segment zeroes out factors)
   const data = (Object.entries(factors) as [keyof FactorBreakdown, number][])
-    .filter(([, v]) => v !== 0)
-    .map(([key, value]) => ({ key, name: LABELS[key], shortName: SHORT_LABELS[key], value }))
-    .sort((a, b) => Math.abs(b.value) - Math.abs(a.value));
+    .map(([key, value]) => ({ key, name: LABELS[key], shortName: SHORT_LABELS[key], value }));
 
   const totalAdj = finalRate - baseRate;
   const formattedDate = new Date(date + "T00:00:00").toLocaleDateString("en-US", {
@@ -105,55 +105,51 @@ export function FactorBreakdownChart({ factors, baseRate, finalRate, date, rateF
         </div>
       </div>
 
-      {/* Bar chart */}
-      {data.length === 0 ? (
-        <p className="text-sm text-gray-400">No active adjustments for this date.</p>
-      ) : (
-        <div className="h-56">
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart
-              data={data}
-              layout="vertical"
-              margin={{ left: 4, right: 36, top: 4, bottom: 4 }}
-            >
-              <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#f3f4f6" />
-              <XAxis
-                type="number"
-                tickFormatter={(v: number) => `${v >= 0 ? "+" : ""}$${v.toFixed(0)}`}
-                tick={{ fontSize: 10, fill: "#9ca3af" }}
-                axisLine={false}
-                tickLine={false}
-              />
-              <YAxis
-                type="category"
-                dataKey="shortName"
-                width={52}
-                tick={{ fontSize: 11, fill: "#374151" }}
-                axisLine={false}
-                tickLine={false}
-              />
-              <Tooltip
-                formatter={(value: number) => [
-                  `${value >= 0 ? "+" : ""}$${Math.abs(value).toFixed(2)}`,
-                  "Adjustment",
-                ]}
-                labelFormatter={(_, payload) => payload?.[0]?.payload?.name ?? ""}
-                contentStyle={{ fontSize: 13, borderRadius: 8, border: "1px solid #e5e7eb" }}
-              />
-              <ReferenceLine x={0} stroke="#d1d5db" />
-              <Bar dataKey="value" radius={[0, 4, 4, 0]}>
-                {data.map((entry, i) => (
-                  <Cell
-                    key={i}
-                    fill={entry.value >= 0 ? "#f59e0b" : "#10b981"}
-                    fillOpacity={0.85}
-                  />
-                ))}
-              </Bar>
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
-      )}
+      {/* Bar chart — fixed layout: all factors always rendered so bars never jump positions */}
+      <div className="h-64">
+        <ResponsiveContainer width="100%" height="100%">
+          <BarChart
+            data={data}
+            layout="vertical"
+            margin={{ left: 4, right: 36, top: 4, bottom: 4 }}
+          >
+            <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#f3f4f6" />
+            <XAxis
+              type="number"
+              tickFormatter={(v: number) => `${v >= 0 ? "+" : ""}$${v.toFixed(0)}`}
+              tick={{ fontSize: 10, fill: "#9ca3af" }}
+              axisLine={false}
+              tickLine={false}
+            />
+            <YAxis
+              type="category"
+              dataKey="shortName"
+              width={52}
+              tick={{ fontSize: 11, fill: "#374151" }}
+              axisLine={false}
+              tickLine={false}
+            />
+            <Tooltip
+              formatter={(value: number) => [
+                `${value >= 0 ? "+" : ""}$${Math.abs(value).toFixed(2)}`,
+                "Adjustment",
+              ]}
+              labelFormatter={(_, payload) => payload?.[0]?.payload?.name ?? ""}
+              contentStyle={{ fontSize: 13, borderRadius: 8, border: "1px solid #e5e7eb" }}
+            />
+            <ReferenceLine x={0} stroke="#d1d5db" />
+            <Bar dataKey="value" radius={[0, 4, 4, 0]} isAnimationActive={false}>
+              {data.map((entry, i) => (
+                <Cell
+                  key={i}
+                  fill={entry.value >= 0 ? "#f59e0b" : "#10b981"}
+                  fillOpacity={entry.value === 0 ? 0.15 : 0.85}
+                />
+              ))}
+            </Bar>
+          </BarChart>
+        </ResponsiveContainer>
+      </div>
 
       {/* Stat grid */}
       <div className="grid grid-cols-4 gap-1.5 sm:grid-cols-4 md:gap-2">

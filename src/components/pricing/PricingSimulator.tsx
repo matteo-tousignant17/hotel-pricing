@@ -338,8 +338,8 @@ export function PricingSimulator({ hotelId, roomTypes }: Props) {
           </div>
         )}
         {error && !loading && <p className="text-sm text-red-600">{error}</p>}
-        {result && !loading && (
-          <div>
+        {result && (
+          <div className={`transition-opacity duration-150 ${loading ? "opacity-30 pointer-events-none" : "opacity-100"}`}>
             <div className="mb-3 flex flex-wrap items-center gap-3 text-xs text-gray-500">
               <span>
                 Occupancy{" "}

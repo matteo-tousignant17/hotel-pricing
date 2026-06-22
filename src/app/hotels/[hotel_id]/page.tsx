@@ -63,6 +63,8 @@ export default async function HotelDetailPage({
         stay_date: today,
         base_rate: row.base_rate,
         rate_final: row.rate_final,
+        rate_floor: Math.round(row.base_rate * 0.65 * 100) / 100,
+        rate_ceiling: Math.round(row.base_rate * 2.5 * 100) / 100,
         rate_channel: "direct",
         occupancy_pct: row.occupancy_pct,
         factors: {
@@ -74,6 +76,7 @@ export default async function HotelDetailPage({
           adj_demand_pickup: row.adj_demand_pickup,
           adj_comp_set: row.adj_comp_set,
           adj_channel: row.adj_channel,
+          adj_segment: row.adj_segment ?? 0,
         },
       };
     }

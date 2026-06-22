@@ -96,6 +96,8 @@ export function RateCalendarChart({ entries, baseRate }: Props) {
               fill="url(#rateGrad)"
               dot={false}
               activeDot={{ r: 4 }}
+              animationDuration={400}
+              animationEasing="ease-out"
             />
           </AreaChart>
         </ResponsiveContainer>
