@@ -22,6 +22,7 @@ export const api = {
       custom_weights?: CustomWeights;
       market_segment?: MarketSegment;
       contract_type?: ContractType;
+      occupancy_override?: number;
     }) => post<PricingResult>("/api/pricing/calculate", params),
   },
 };

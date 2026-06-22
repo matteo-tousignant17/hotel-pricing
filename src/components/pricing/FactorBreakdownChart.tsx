@@ -43,9 +43,11 @@ interface Props {
   baseRate: number;
   finalRate: number;
   date: string;
+  rateFloor?: number;
+  rateCeiling?: number;
 }
 
-export function FactorBreakdownChart({ factors, baseRate, finalRate, date }: Props) {
+export function FactorBreakdownChart({ factors, baseRate, finalRate, date, rateFloor, rateCeiling }: Props) {
   const data = (Object.entries(factors) as [keyof FactorBreakdown, number][])
     .filter(([, v]) => v !== 0)
     .map(([key, value]) => ({ key, name: LABELS[key], shortName: SHORT_LABELS[key], value }))
@@ -64,15 +66,40 @@ export function FactorBreakdownChart({ factors, baseRate, finalRate, date }: Pro
       {/* Rate headline */}
       <div>
         <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
-          <span className="text-3xl font-bold">${finalRate.toFixed(0)}</span>
+          <span className={`text-3xl font-bold ${
+            rateCeiling && finalRate > rateCeiling ? "text-red-600"
+            : rateFloor && finalRate < rateFloor ? "text-blue-600"
+            : ""
+          }`}>${finalRate.toFixed(0)}</span>
           <span className="text-sm text-gray-500">/night</span>
           <span className="text-xs text-gray-400">{formattedDate}</span>
+          {rateCeiling && finalRate > rateCeiling && (
+            <span className="rounded bg-red-50 px-1.5 py-0.5 text-xs text-red-600">above guideline</span>
+          )}
+          {rateFloor && finalRate < rateFloor && (
+            <span className="rounded bg-blue-50 px-1.5 py-0.5 text-xs text-blue-600">below guideline</span>
+          )}
         </div>
-        <div className="mt-1 text-sm text-gray-500">
-          Base ${baseRate.toFixed(0)}
-          {totalAdj !== 0 && (
-            <span className={totalAdj > 0 ? "ml-1 text-amber-600" : "ml-1 text-green-600"}>
-              {totalAdj > 0 ? " +" : " "}${totalAdj.toFixed(0)} adjustments
+        <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-gray-500">
+          <span>
+            Base ${baseRate.toFixed(0)}
+            {totalAdj !== 0 && (
+              <span className={totalAdj > 0 ? "ml-1 text-amber-600" : "ml-1 text-green-600"}>
+                {totalAdj > 0 ? " +" : " "}${totalAdj.toFixed(0)} adjustments
+              </span>
+            )}
+          </span>
+          {(rateFloor || rateCeiling) && (
+            <span className="text-xs text-gray-400">
+              Guideline{" "}
+              <span className="font-medium text-gray-600">
+                ${rateFloor?.toFixed(0) ?? "—"} min
+              </span>
+              {" · "}
+              <span className="font-medium text-gray-600">
+                ${rateCeiling?.toFixed(0) ?? "—"} max
+              </span>
+              <span className="ml-1 text-gray-300">(soft)</span>
             </span>
           )}
         </div>

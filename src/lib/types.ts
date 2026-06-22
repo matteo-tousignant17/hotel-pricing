@@ -72,6 +72,8 @@ export interface PricingResult {
   rate_channel: string;
   occupancy_pct: number | null;
   factors: FactorBreakdown;
+  rate_floor: number;
+  rate_ceiling: number;
 }
 
 export interface RateCalendarEntry {

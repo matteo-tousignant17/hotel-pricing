@@ -49,6 +49,7 @@ export async function POST(req: Request) {
     custom_weights,
     market_segment = "transient",
     contract_type = "corporate_lnr",
+    occupancy_override,
   } = body;
 
   if (!hotel_id || !room_type_id || !stay_date) {
@@ -117,16 +118,22 @@ export async function POST(req: Request) {
     : 0;
   let adjEvent = round2(baseRate * weights.w_event * rawEvent);
 
-  // --- Demand pickup ---
+  // --- Demand pickup (vacancy-driven) ---
+  // occupancy_override lets the simulator explore "what if 95% full?" scenarios
   const occupancyPct =
-    occRes.data?.[0]?.occupancy_pct != null
-      ? Number(occRes.data[0].occupancy_pct)
-      : TIER_BASELINE_OCC[hotel.brand_tier ?? ""] ?? 0.73;
-  const baseline = TIER_BASELINE_OCC[hotel.brand_tier ?? ""] ?? 0.73;
-  const delta = occupancyPct - baseline;
+    occupancy_override != null
+      ? Number(occupancy_override)
+      : occRes.data?.[0]?.occupancy_pct != null
+        ? Number(occRes.data[0].occupancy_pct)
+        : TIER_BASELINE_OCC[hotel.brand_tier ?? ""] ?? 0.73;
+  // Absolute occupancy thresholds — low vacancy (high occ) drives rate up sharply
   const rawDemand =
-    delta >= 0.18 ? 0.12 : delta >= 0.10 ? 0.07 : delta >= 0.04 ? 0.03
-    : delta >= -0.04 ? 0 : delta >= -0.10 ? -0.03 : -0.06;
+    occupancyPct >= 0.95 ? 0.25
+    : occupancyPct >= 0.85 ? 0.15
+    : occupancyPct >= 0.75 ? 0.08
+    : occupancyPct >= 0.65 ? 0
+    : occupancyPct >= 0.55 ? -0.08
+    : -0.15;
   let adjDemandPickup = round2(baseRate * weights.w_demand_pickup * rawDemand);
 
   // --- Comp set (one more query if comp hotels exist) ---
@@ -181,15 +188,11 @@ export async function POST(req: Request) {
     adjSegment = round2(baseRate * (contractDiscounts[contract_type] ?? -0.20));
   }
 
-  const rateFinal = round2(
-    Math.max(
-      baseRate * 0.50,
-      Math.min(
-        baseRate * 4.0,
-        baseRate + adjDayOfWeek + adjSeason + adjEvent + adjLeadTime + adjLos + adjDemandPickup + adjCompSet + adjChannel + adjSegment
-      )
-    )
-  );
+  const rateFloor = round2(baseRate * 0.65);
+  const rateCeiling = round2(baseRate * 2.5);
+  const rateRaw = baseRate + adjDayOfWeek + adjSeason + adjEvent + adjLeadTime + adjLos + adjDemandPickup + adjCompSet + adjChannel + adjSegment;
+  // Hard limits: absolute floor 50%, absolute ceiling 4× (guideline soft limits: 65% / 2.5×)
+  const rateFinal = round2(Math.max(baseRate * 0.50, Math.min(baseRate * 4.0, rateRaw)));
 
   return NextResponse.json({
     hotel_id,
@@ -197,6 +200,8 @@ export async function POST(req: Request) {
     stay_date,
     base_rate: baseRate,
     rate_final: rateFinal,
+    rate_floor: rateFloor,
+    rate_ceiling: rateCeiling,
     rate_channel,
     occupancy_pct: occupancyPct,
     factors: {

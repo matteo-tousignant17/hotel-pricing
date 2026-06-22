@@ -54,6 +54,7 @@ export function PricingSimulator({ hotelId, roomTypes }: Props) {
   const [weights, setWeights] = useState<CustomWeights>({ ...DEFAULT_WEIGHTS });
   const [marketSegment, setMarketSegment] = useState<MarketSegment>("transient");
   const [contractType, setContractType] = useState<ContractType>("corporate_lnr");
+  const [occupancy, setOccupancy] = useState<number>(0.75);
 
   const [result, setResult] = useState<PricingResult | null>(null);
   const [loading, setLoading] = useState(false);
@@ -76,6 +77,7 @@ export function PricingSimulator({ hotelId, roomTypes }: Props) {
         custom_weights: weights,
         market_segment: marketSegment,
         contract_type: marketSegment === "contract" ? contractType : undefined,
+        occupancy_override: occupancy,
       });
       setResult(data);
     } catch {
@@ -83,7 +85,7 @@ export function PricingSimulator({ hotelId, roomTypes }: Props) {
     } finally {
       setLoading(false);
     }
-  }, [hotelId, roomTypeId, stayDate, leadTime, los, channel, weights, marketSegment, contractType]);
+  }, [hotelId, roomTypeId, stayDate, leadTime, los, channel, weights, marketSegment, contractType, occupancy]);
 
   useEffect(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
@@ -154,6 +156,44 @@ export function PricingSimulator({ hotelId, roomTypes }: Props) {
             </p>
           </div>
         )}
+      </div>
+
+      {/* Occupancy / Vacancy — primary demand driver */}
+      <div className="rounded-xl border border-gray-200 bg-gray-50 p-4">
+        <div className="mb-2 flex items-center justify-between">
+          <div>
+            <span className="text-sm font-medium text-gray-700">Occupancy</span>
+            <span className="ml-2 text-xs text-gray-400">vacancy drives rate more than any other factor</span>
+          </div>
+          <div className="flex items-baseline gap-1">
+            <span className={`text-2xl font-bold tabular-nums ${
+              occupancy >= 0.95 ? "text-red-600"
+              : occupancy >= 0.85 ? "text-orange-500"
+              : occupancy >= 0.75 ? "text-amber-500"
+              : occupancy >= 0.65 ? "text-gray-700"
+              : "text-blue-600"
+            }`}>
+              {Math.round(occupancy * 100)}%
+            </span>
+            <span className="text-xs text-gray-400">full</span>
+          </div>
+        </div>
+        <input
+          type="range"
+          min={0}
+          max={1}
+          step={0.01}
+          value={occupancy}
+          onChange={(e) => setOccupancy(parseFloat(e.target.value))}
+          className="h-2 w-full cursor-pointer appearance-none rounded-full bg-gray-200 accent-blue-600"
+        />
+        <div className="mt-1.5 flex justify-between text-xs text-gray-400">
+          <span>Empty (−15%)</span>
+          <span>65% neutral</span>
+          <span>75% +8%</span>
+          <span>85% +15%</span>
+          <span>Full (+25%)</span>
+        </div>
       </div>
 
       {/* Inputs row */}
@@ -301,14 +341,12 @@ export function PricingSimulator({ hotelId, roomTypes }: Props) {
         {result && !loading && (
           <div>
             <div className="mb-3 flex flex-wrap items-center gap-3 text-xs text-gray-500">
-              {result.occupancy_pct != null && (
-                <span>
-                  Occupancy{" "}
-                  <span className="font-semibold text-gray-700">
-                    {Math.round(result.occupancy_pct * 100)}%
-                  </span>
+              <span>
+                Occupancy{" "}
+                <span className="font-semibold text-gray-700">
+                  {Math.round(occupancy * 100)}%
                 </span>
-              )}
+              </span>
               <span className="text-gray-300">·</span>
               <span>
                 Algorithm output
@@ -335,6 +373,8 @@ export function PricingSimulator({ hotelId, roomTypes }: Props) {
               baseRate={result.base_rate}
               finalRate={result.rate_final}
               date={result.stay_date}
+              rateFloor={result.rate_floor}
+              rateCeiling={result.rate_ceiling}
             />
           </div>
         )}
